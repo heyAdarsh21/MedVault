@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base:       #0b1220;
+  --bg-surface:    #0f1a2e;
+  --bg-elevated:   #132038;
+  --bg-overlay:    #1a2d48;
+  --border:        #1e3350;
+  --border-subtle: #162840;
+  --text-primary:  #ddeeff;
+  --text-secondary:#7a9ec0;
+  --text-muted:    #3d5878;
+  --blue:          #3b8cf8;
+  --blue-dim:      rgba(59,140,248,0.12);
+  --blue-glow:     rgba(59,140,248,0.25);
+  --emerald:       #10c98a;
+  --emerald-dim:   rgba(16,201,138,0.1);
+  --amber:         #f4a726;
+  --amber-dim:     rgba(244,167,38,0.1);
+  --red:           #f04444;
+  --red-dim:       rgba(240,68,68,0.1);
+  --orange:        #f97316;
+  --orange-dim:    rgba(249,115,22,0.1);
+  --font-ui:   'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 14px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  margin: 0;
+}
+
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+select option { background: var(--bg-elevated); color: var(--text-primary); }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.8); opacity: 0; }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+.stagger-1 { animation: fade-up 0.45s 0.05s ease both; }
+.stagger-2 { animation: fade-up 0.45s 0.10s ease both; }
+.stagger-3 { animation: fade-up 0.45s 0.15s ease both; }
+.stagger-4 { animation: fade-up 0.45s 0.20s ease both; }
+.stagger-5 { animation: fade-up 0.45s 0.25s ease both; }
+.stagger-6 { animation: fade-up 0.45s 0.30s ease both; }

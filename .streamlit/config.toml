@@ -1,0 +1,8 @@
+[theme]
+base = "light"
+
+primaryColor = "#1E88E5"
+backgroundColor = "#F9FBFD"
+secondaryBackgroundColor = "#EEF4FB"
+textColor = "#1F2A37"
+font = "manrope"
