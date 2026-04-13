@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgres:16
@@ -21,13 +19,24 @@ services:
       - db
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/medvault
-      
       JWT_SECRET_KEY: SuperSecret
       JWT_ALGORITHM: HS256
     ports:
       - "8000:8000"
     volumes:
       - .:/app
+
+  frontend:
+    build: ./medvault-frontend
+    container_name: medvault-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./medvault-frontend:/app
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000/api/v1
 
 volumes:
   pgdata:
