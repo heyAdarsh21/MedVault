@@ -4,10 +4,11 @@ JWT-based authentication for MEDVAULT API v1 (DATABASE-BACKED).
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, List
 
-import jwt  # type: ignore
+import jwt  # PyJWT
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -23,6 +24,8 @@ from domain.schemas import (
     UserCreate,
 )
 from core.security import hash_password, verify_password
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -54,27 +57,39 @@ def _create_access_token(user: DBUser) -> str:
 
 @router.post("/signup", response_model=Token)
 def signup(user_in: UserCreate, db: Session = Depends(get_db)) -> Token:
+    logger.info("Signup attempt for username=%s", user_in.username)
+
     existing = (
         db.query(DBUser)
         .filter(DBUser.username == user_in.username)
         .first()
     )
     if existing:
+        logger.warning("Signup failed: username '%s' already exists", user_in.username)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already exists",
         )
 
-    user = DBUser(
-        username=user_in.username,
-        hashed_password=hash_password(user_in.password),
-        role=UserRole.VIEWER.value,
-        is_active=1,
-    )
+    try:
+        user = DBUser(
+            username=user_in.username,
+            hashed_password=hash_password(user_in.password),
+            role=UserRole.VIEWER.value,
+            is_active=True,
+        )
 
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        logger.info("User created: id=%s username=%s role=%s", user.id, user.username, user.role)
+    except Exception as exc:
+        db.rollback()
+        logger.error("Signup DB error for username=%s: %s", user_in.username, exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create user: {exc}",
+        )
 
     token = _create_access_token(user)
     return Token(access_token=token, token_type="bearer")
@@ -89,21 +104,29 @@ def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Session = Depends(get_db),
 ) -> Token:
+    logger.info("Login attempt for username=%s", form_data.username)
+
     user = (
         db.query(DBUser)
         .filter(DBUser.username == form_data.username)
         .first()
     )
 
-    if not user or not verify_password(
-        form_data.password,
-        user.hashed_password,
-    ):
+    if not user:
+        logger.warning("Login failed: user '%s' not found in DB", form_data.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
+            detail="Invalid credentials — user not found",
         )
 
+    if not verify_password(form_data.password, user.hashed_password):
+        logger.warning("Login failed: wrong password for user '%s'", form_data.username)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials — wrong password",
+        )
+
+    logger.info("Login success: username=%s role=%s", user.username, user.role)
     token = _create_access_token(user)
     return Token(access_token=token, token_type="bearer")
 
@@ -136,7 +159,8 @@ def get_current_user(
 
         role = UserRole(role_value)
 
-    except Exception:
+    except Exception as exc:
+        logger.warning("JWT validation failed: %s", exc)
         raise credentials_exception
 
     return User(username=username, role=role)

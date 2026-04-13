@@ -1,8 +1,24 @@
 """FastAPI main application — MedVault"""
-from fastapi import FastAPI
+import logging
+import sys
+import traceback
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from config.settings import settings
+
+# ── Structured Logging ────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=getattr(logging, settings.log_level.upper(), logging.INFO),
+    format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    stream=sys.stdout,
+    force=True,
+)
+logger = logging.getLogger("medvault")
+logger.info("Starting MedVault API v%s (env=%s)", settings.api_version, settings.environment)
 
 # Core v1 routes
 from api.v1 import auth as auth_routes
@@ -19,7 +35,7 @@ from api.ingestion_routes import router as ingestion_router
 from api.admin_routes import router as admin_router
 
 # Patient services
-from patient_services_routes import router as patient_services_router
+from api.patient_services_routes import router as patient_services_router
 from patient_signup_route import router as patient_signup_router
 
 # NEW: Recommendation engine
@@ -34,6 +50,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── Global Exception Handler ──────────────────────────────────────────────────
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch ANY unhandled exception, log it, and return a clear 500 response."""
+    tb = traceback.format_exc()
+    logger.error(
+        "Unhandled exception on %s %s:\n%s",
+        request.method, request.url.path, tb,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": f"Internal server error: {type(exc).__name__}: {exc}",
+            "path": str(request.url.path),
+        },
+    )
+
 
 # Versioned API
 app.include_router(auth_routes.router,         prefix=settings.api_prefix)

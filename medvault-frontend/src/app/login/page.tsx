@@ -58,8 +58,10 @@ export default function LoginPage() {
       } else {
         router.push("/dashboard/system-health");
       }
-    } catch {
-      setError("Invalid username or password.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      setError(detail || "Invalid username or password.");
+      console.error("Login error:", err?.response?.status, detail);
     } finally { setLoading(false); }
   }
 
